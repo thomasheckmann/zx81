@@ -1,0 +1,688 @@
+Sjasm Z80 Assembler v0.42c - www.xl2s.tk             [2026.02.02 - 21:03:38]
+
+C:\2025 usb\USB-staafje\150 Beepstrap paradox\beep017.asm
+Errors: 0
+
+       1   00:4009                      ; Beepstrap paradox
+       2   00:4009                      ; game 150 for the ZX81
+       3   00:4009                      ; (c) 2026 Johan "Dr Beep" Koelman
+       4   00:4009                      
+       5   00:4009  (00:000E)           lines	equ	14
+       6   00:4009  (00:0017)           rsize	equ	23
+       7   00:4009  (00:0080)           bg	equ	128
+       8   00:4009                      
+       9   00:4009  (00:4000)           field	equ	#4000
+      10   00:4009  (00:4004)           scrpos	equ	field+4
+      11   00:4009                      
+      12   00:4009  (00:0000)           lastkok	equ	lastkc-fieldc-(lastk-field)
+      13   00:4009  (00:0000)           frameok	equ	framesc-fieldc-(frames-field)
+      14   00:4009  (00:402F)           rnd	equ	rndc-fieldc+#4000
+      15   00:4009  (00:4020)           up	equ	upc-fieldc+#4000
+      16   00:4009  (00:4022)           left	equ	leftc-fieldc+#4000
+      17   00:4009  (00:4029)           right	equ	rightc-fieldc+#4000
+      18   00:4009  (00:402B)           down	equ	downc-fieldc+#4000
+      19   00:4009  (00:4000)           shwdir	equ	shwdirc-fieldc+#4000
+      20   00:4009  (00:402D)           getidea	equ	getidc-fieldc+#4000
+      21   00:4009                      
+      22   00:4009  (00:4280)           t1	equ	#4280			; hardcoded locations due to packed screen
+      23   00:4009  (00:4389)           t2	equ	#4389
+      24   00:4009                      
+      25   00:4009                      
+      26   00:4009                      	org 	#4009
+      27   00:4009                      
+      28   00:4009                      ; in LOWRES more sysvar are used, but in this way the shortest code
+      29   00:4009                      ; over sysvar to start machinecode. This saves 11 bytes of BASIC
+      30   00:4009                      
+      31   00:4009                      ; DO NOT CHANGE AFTER BASIC+3 (=DFILE)
+      32   00:4009  26 42               basic   ld	h,fieldc / 256		; high byte of screen
+      33   00:400B  18 14                       jr 	init1			; next part of init
+      34   00:400D                      
+      35   00:400D  EC                  free	db 	236			; BASIC over DFILE data
+      36   00:400E  D4 25               	db 	212,37			
+      37   00:4010  7E 8F 00 12         	db 	126,143,0,18
+      38   00:4014                      
+      39   00:4014  C6 42               eline	dw 	last
+      40   00:4016                      
+      41   00:4016  C5 42               chadd	dw 	last-1
+      42   00:4018                      	
+      43   00:4018  00 00 00 00 00 00   keys	db 	0,0,0,0,0,0		; x
+      44   00:401E  00                  berg	db 	0			; x
+      45   00:401F                      
+      46   00:401F  00 00               mem	db 	0,0			; x OVERWRITTEN ON LOAD
+      47   00:4021                      
+      48   00:4021  AF                  init1	xor	a		
+      49   00:4022  50                  	ld	d,b
+      50   00:4023  18 06               	jr	init2			; next part of init
+      51   00:4025                      		
+      52   00:4025  00 00 00            lastk	db 	0,0,0
+      53   00:4028  37                  margin  db 	55
+      54   00:4029                      
+      55   00:4029  09 40               nxtlin  dw 	basic			; BASIC-line over sysvar	
+      56   00:402B                      
+      57   00:402B  31 29 46            init2	ld	sp,dfile+1024
+      58   00:402E                      	
+      59   00:402E  2E 8B               	ld 	l,fieldc mod 256
+      60   00:4030  00 00               	db 	0,0			; x used by ZX81, not effective code after loading
+      61   00:4032                      	
+      62   00:4032  5F                  	ld	e,a			; DE now #4000
+      63   00:4033  DA                  	db	#da			; skip frames so USB loader will work too with JP C never true from XOR A
+      64   00:4034                      
+      65   00:4034  FF FF               frames  db	255,255			; frames can be used by USB-loader 
+      66   00:4036  0E 3A               	ld	c,erout-fieldc		; BC now #40size
+      67   00:4038  C3 7F 42            	jp 	init4			; now final part coded after packed screen	
+      68   00:403B                      
+      69   00:403B  40                  cdflag  db 	64
+      70   00:403C                      ; DO NOT CHANGE SYSVAR ABOVE!
+      71   00:403C                      
+      72   00:403C  5E                  	db	place mod 256		; 4 place idea elsewhere
+      73   00:403D  4C                  	db	rotr mod 256		; 3
+      74   00:403E  4E                  	db	rotl mod 256		; 2
+      75   00:403F  54                  	db	fward mod 256		; 1
+      76   00:4040                      
+      77   00:4040  FE                  dirtab	db	%11111110		; 4 place action will record as NOP
+      78   00:4041  02                  	db	2
+      79   00:4042  DF                  	db	%11011111		; 3
+      80   00:4043  01                  	db	1
+      81   00:4044  DF                  	db	%11011111		; 2
+      82   00:4045  02                  	db	2
+      83   00:4046  FB                  	db	%11111011		; 1
+      84   00:4047  01                  	db	1
+      85   00:4048                      
+      86   00:4048  2B                  dirp	db	down mod 256
+      87   00:4049  29                  	db	right mod 256
+      88   00:404A  20                  	db	up mod 256
+      89   00:404B  22                  	db	left mod 256	
+      90   00:404C                      
+      91   00:404C  0D                  rotr	dec	c
+      92   00:404D  3E                  	db	62
+      93   00:404E  0C                  rotl	inc	c
+      94   00:404F  79                  bnd	ld	a,c
+      95   00:4050  E6 03               	and	3
+      96   00:4052  4F                  	ld	c,a
+      97   00:4053  C9                  	ret
+      98   00:4054                      		
+      99   00:4054  79                  fward	ld	a,c
+     100   00:4055  C6 48               	add	a,dirp mod 256
+     101   00:4057  6F                  	ld	l,a
+     102   00:4058  6E                  	ld	l,(hl)
+     103   00:4059  CD 7D 00            	call	#7d
+     104   00:405C  18 A6               	db	#18,jrcalc		; jr scrpos
+     105   00:405E  (00:00A6)           jrcalc	equ	256-($-#4004) mod 256
+     106   00:405E                      
+     107   00:405E  21 2D 40            place	ld	hl,getidea
+     108   00:4061  7E                  	ld	a,(hl)
+     109   00:4062  86                  	add	a,(hl)
+     110   00:4063  F0                  	ret	p			; not taken so don't place idea
+     111   00:4064                      	
+     112   00:4064  75                  	ld	(hl),l			; no longer carrying idea reset bit6
+     113   00:4065                      
+     114   00:4065  CD 04 40            	call	scrpos
+     115   00:4068  FE 9B               	cp	27+128			; is it on destination?	
+     116   00:406A  C2 C7 41            	jp	nz,desterr		; destination error is a paradox
+     117   00:406D                      
+     118   00:406D  36 97               	ld	(hl),23+128		; replace as "*"
+     119   00:406F                      
+     120   00:406F  06 09               	ld	b,9
+     121   00:4071  04                  addp	inc	b			; 1 bonuspoint so B<>0
+     122   00:4072  21 2F 42            addst	ld	hl,score+5
+     123   00:4075  3A                  	db	#3a			; skip resetting to "0"
+     124   00:4076  36 1C               ten	ld	(hl),28
+     125   00:4078  2B                  	dec	hl
+     126   00:4079  34                  	inc	(hl)
+     127   00:407A  7E                  	ld	a,(hl)
+     128   00:407B  FE 26               	cp	38			; test > "9"
+     129   00:407D  28 F7               	jr	z,ten
+     130   00:407F  10 F1               	djnz	addst
+     131   00:4081  C9                  	ret
+     132   00:4082                      	
+     133   00:4082  2E 29               eog	ld	l,score mod 256 -1
+     134   00:4084  11 3B 42            	ld	de,hiscore-1
+     135   00:4087  01 06 00            	ld	bc,6
+     136   00:408A  0B                  fihi	dec	bc
+     137   00:408B  23                  	inc	hl
+     138   00:408C  13                  	inc	de
+     139   00:408D  1A                  	ld	a,(de)
+     140   00:408E  BE                  	cp	(hl)
+     141   00:408F  28 F9               	jr	z,fihi
+     142   00:4091  DC 6E 0A            	call	c,#a6e
+     143   00:4094                      
+     144   00:4094  3A 25 40            start	ld	a,(lastk)
+     145   00:4097  D6 BF               	sub	191
+     146   00:4099  20 F9               	jr	nz,start
+     147   00:409B                      
+     148   00:409B  21 2A 42            	ld	hl,score
+     149   00:409E  36 1C               ersc	ld	(hl),28
+     150   00:40A0  23                  	inc	hl
+     151   00:40A1  BE                  	cp	(hl)
+     152   00:40A2  20 FA               	jr	nz,ersc
+     153   00:40A4                      
+     154   00:40A4  3E 20               	ld	a,32
+     155   00:40A6  32 30 42            	ld	(lives),a
+     156   00:40A9                      
+     157   00:40A9  21 30 42            pardead	ld	hl,lives
+     158   00:40AC  35                  	dec	(hl)
+     159   00:40AD  7E                  	ld	a,(hl)
+     160   00:40AE  FE 1C               	cp	28
+     161   00:40B0  28 D0               	jr	z,eog
+     162   00:40B2                      
+     163   00:40B2  54                  	ld	d,h			; Y recorded Dr Beep starts out of screen
+     164   00:40B3                      
+     165   00:40B3  2E 51               	ld	l,screen mod 256
+     166   00:40B5  36 80               cllp	ld	(hl),128
+     167   00:40B7  23                  lnfd	inc	hl
+     168   00:40B8  7E                  	ld	a,(hl)
+     169   00:40B9  FE 76               	cp	#76
+     170   00:40BB  28 FA               	jr	z,lnfd
+     171   00:40BD  FE E9               	cp	#e9	
+     172   00:40BF  20 F4               	jr	nz,cllp			; clearscreen
+     173   00:40C1                      	
+     174   00:40C1  D9                  	exx
+     175   00:40C2                      
+     176   00:40C2  11 01 00            	ld	de,1			; first startposition
+     177   00:40C5  4A                  	ld	c,d			; first direction
+     178   00:40C6                      
+     179   00:40C6  21 BA 43            	ld	hl,#4400-70		; erase old recordings other games
+     180   00:40C9                      
+     181   00:40C9  77                  clrrec	ld	(hl),a
+     182   00:40CA  2C                  	inc	l
+     183   00:40CB  20 FC               	jr	nz,clrrec
+     184   00:40CD                      	
+     185   00:40CD  22 2D 40            	ld	(getidea),hl		; this will set ghostidea taken but that will reset again
+     186   00:40D0                      
+     187   00:40D0  20 D7               levloop jr	nz,pardead
+     188   00:40D2  D9                  	exx
+     189   00:40D3  D5                  	push	de			; save current recorded xy
+     190   00:40D4                      
+     191   00:40D4  21 34 40            	ld	hl,frames
+     192   00:40D7  7E                  	ld	a,(hl)
+     193   00:40D8  94                  	sub	h			; >1 sec del before next level
+     194   00:40D9  BE                  wfr2	cp	(hl)
+     195   00:40DA  20 FD               	jr	nz,wfr2
+     196   00:40DC                      
+     197   00:40DC  AF                  	xor	a
+     198   00:40DD  32 2E 40            	ld	(getidea+1),a		; reset ideas taken
+     199   00:40E0                      
+     200   00:40E0  21 00 04            rndseed	ld	hl,#0400		; randomseed 
+     201   00:40E3  CD 2F 40            	call	rnd			; get randomized number in A
+     202   00:40E6  D6 07               frndy	sub	lines/2
+     203   00:40E8  30 FC               	jr	nc,frndy	
+     204   00:40EA  C6 0B               	add	a,lines/2+4
+     205   00:40EC  57                  	ld	d,a
+     206   00:40ED  CD 2F 40            	call	rnd			; get randomized number in A
+     207   00:40F0  5F                  frndx	ld	e,a
+     208   00:40F1  D6 0B               	sub	rsize/2
+     209   00:40F3  30 FB               	jr	nc,frndx
+     210   00:40F5  CE 0F               	adc	a,rsize/2+4
+     211   00:40F7  5F                  	ld	e,a
+     212   00:40F8  22 E1 40            	ld	(rndseed+1),hl		; save new seed
+     213   00:40FB  CD 04 40            	call	scrpos
+     214   00:40FE  87                  	add	a,a			; field free?
+     215   00:40FF  20 DF               	jr	nz,rndseed
+     216   00:4101  36 8F               	ld	(hl),15+128		; show "?" as ideamarker
+     217   00:4103  D1                  	pop	de
+     218   00:4104                      	
+     219   00:4104  21 BA 43            notlv1	ld	hl,#4400-70		; start of recording/playback
+     220   00:4107  06 04               	ld	b,4			; 4 recordings in a field
+     221   00:4109  D9                  	exx
+     222   00:410A                      
+     223   00:410A  D5                  	push	de			; start player XY is in level next XY computer
+     224   00:410B  C5                  	push	bc			; save start watchdirection
+     225   00:410C  CD 04 40            ploop	call	scrpos
+     226   00:410F  E5                  	push	hl
+     227   00:4110                      ; 27 .
+     228   00:4110                      ; 23 *
+     229   00:4110                      ; 15 ?
+     230   00:4110  FE 9B               	cp	27+128			; is it destination
+     231   00:4112  28 15               	jr	z,erasall		; keep it
+     232   00:4114  FE 97               	cp	23+128			; is it ghostidea?
+     233   00:4116  28 11               	jr	z,erasall		; keep it
+     234   00:4118  FE 8F               	cp	15+128			; is it "?"
+     235   00:411A  3E 80               	ld	a,128
+     236   00:411C  20 0B               	jr	nz,erasall		; erase whatever was here
+     237   00:411E  7E                  	ld	a,(hl)
+     238   00:411F  21 2D 40            	ld	hl,getidea
+     239   00:4122  CB 76               	bit	6,(hl)			; test earlier taken, if so then placed here
+     240   00:4124  20 03               	jr	nz,erasall		; if so, don't take again	
+     241   00:4126  74                  	ld	(hl),h			; signal player has idea
+     242   00:4127  3E 9B               	ld	a,27+128		; destination next idea
+     243   00:4129  47                  erasall	ld	b,a
+     244   00:412A  79                  	ld	a,c
+     245   00:412B  6F                  	ld	l,a
+     246   00:412C  26 40               	ld	h,64
+     247   00:412E  7E                  	ld	a,(hl)
+     248   00:412F  E1                  	pop	hl
+     249   00:4130  77                  	ld	(hl),a			; show player Dr Beep
+     250   00:4131  C5                  	push	bc
+     251   00:4132  E5                  	push	hl
+     252   00:4133                      
+     253   00:4133  D9                  	exx
+     254   00:4134  E5                  	push	hl			; save recording pointer
+     255   00:4135                      
+     256   00:4135  D5                  	push	de			; save ghost xy
+     257   00:4136  C5                  	push	bc 
+     258   00:4137  47                  	ld	b,a			; save player display
+     259   00:4138  CD 04 40            	call	scrpos
+     260   00:413B  B8                  vwtlp	cp	b
+     261   00:413C  CA C8 41            	jp	z,desterr+1
+     262   00:413F  26 40               	ld	h,64
+     263   00:4141  CD 54 40            	call	fward			; move forward	
+     264   00:4144  30 F5               	jr	nc,vwtlp		; not yet at end
+     265   00:4146  C1                  	pop	bc
+     266   00:4147  D1                  	pop	de
+     267   00:4148                      
+     268   00:4148  CD 04 40            	call	scrpos			; get current screen recorded Dr Beep
+     269   00:414B                      
+     270   00:414B  30 03               	jr	nc,dodisp		; no display out of screen (first play)
+     271   00:414D                      
+     272   00:414D  21 00 00            	ld	hl,0			; point to ROM ( 0 for SP-2-ZX emulator ROM unprotected but 0 not used by emulator)	
+     273   00:4150                      
+     274   00:4150                      dodisp
+     275   00:4150                      
+     276   00:4150  FE 97               	cp	23+128			
+     277   00:4152  E5                  	push	hl			; save screenlocation
+     278   00:4153  20 0E               	jr	nz,noidea
+     279   00:4155  21 2E 40            	ld	hl,getidea+1
+     280   00:4158  74                  	ld	(hl),h			; signal idea taken
+     281   00:4159                      
+     282   00:4159  D9                  	exx
+     283   00:415A  E5                  	push	hl
+     284   00:415B  AF                  	xor	a			; end of recording
+     285   00:415C  95                  	sub	l			; subtract recorderpointer
+     286   00:415D  47                  	ld	b,a			; save score in B
+     287   00:415E  CD 71 40            	call	addp			; add B+1 points
+     288   00:4161  E1                  	pop	hl
+     289   00:4162  D9                  	exx
+     290   00:4163                      
+     291   00:4163                      noidea
+     292   00:4163                      
+     293   00:4163  69                  	ld	l,c			; get direction
+     294   00:4164  26 40               	ld	h,64
+     295   00:4166  7E                  	ld	a,(hl)			; get directiondisplay
+     296   00:4167                      
+     297   00:4167  E1                  	pop	hl			; get screenlocation
+     298   00:4168  CB BF               	res	7,a			; show recorded as inverted character
+     299   00:416A  77                  	ld	(hl),a			; show recorded Dr Beep
+     300   00:416B  E3                  	ex	(sp),hl			; save for restorebackground
+     301   00:416C  D9                  	exx
+     302   00:416D                      
+     303   00:416D  21 34 40            	ld	hl,frames
+     304   00:4170  7E                  	ld	a,(hl)
+     305   00:4171  D6 0A               	sub	10			; 5 recordings / second on 50 mhz
+     306   00:4173  BE                  wfr	cp	(hl)
+     307   00:4174  20 FD               	jr	nz,wfr
+     308   00:4176                      
+     309   00:4176  E1                  	pop	hl
+     310   00:4177  36 80               	ld	(hl),128		; repair recorded background
+     311   00:4179                      
+     312   00:4179  E1                  	pop	hl
+     313   00:417A  F1                  	pop	af
+     314   00:417B  77                  	ld	(hl),a			; repair played background
+     315   00:417C                      
+     316   00:417C  21 7E 42            	ld	hl,t1-2
+     317   00:417F  36 B9               	ld	(hl),"T"+101		; place timemachines on screen
+     318   00:4181  21 8A 43            	ld	hl,t2+1
+     319   00:4184  36 B9               	ld	(hl),"T"+101		; place timemachines on screen
+     320   00:4186                      
+     321   00:4186  06 04               	ld	b,4
+     322   00:4188  21 3F 40            	ld	hl,dirtab-1
+     323   00:418B  23                  dirlp	inc	hl
+     324   00:418C  7E                  	ld	a,(hl)
+     325   00:418D  DB FE               	in	a,(254)
+     326   00:418F  23                  	inc	hl
+     327   00:4190  A6                  	and	(hl)
+     328   00:4191  28 02               	jr	z,dodir
+     329   00:4193  10 F6               	djnz	dirlp
+     330   00:4195                      	
+     331   00:4195  CC F6 41            dodir	call	z,dodir2
+     332   00:4198                      
+     333   00:4198                      ; here we have placed action in B which we need to record but also do the recorded move in (HL') 
+     334   00:4198                      
+     335   00:4198  78                  	ld	a,b			; get player action
+     336   00:4199  D9                  	exx
+     337   00:419A  C5                  	push	bc			; save loopcounter and direction recorded
+     338   00:419B  46                  	ld 	b,(hl)			; get recorded data
+     339   00:419C  1F                  	rra				; shift bit0 from player into C
+     340   00:419D  CB 1E               	rr	(hl)			; shift C into bit7
+     341   00:419F  1F                  	rra				; shift bit1 from player into C
+     342   00:41A0  CB 1E               	rr	(hl)			; shift C into bit7, player action now in b7b6
+     343   00:41A2                      
+     344   00:41A2  AF                  	xor	a
+     345   00:41A3  95                  	sub	l			; remaining time, 71 ...... 1
+     346   00:41A4  0F                  	rrca				
+     347   00:41A5  0F                  	rrca
+     348   00:41A6  0F                  	rrca				; divide by 8
+     349   00:41A7  E6 0F               	and	15			; display 9....1 only
+     350   00:41A9  C6 1D               	add	a,29			; make it a number
+     351   00:41AB  32 42 42            	ld	(timer),a		; show timer
+     352   00:41AE                      
+     353   00:41AE  78                  	ld	a,b			; get recorded data
+     354   00:41AF  E6 03               	and	3			; keep bit1 and bit0 only
+     355   00:41B1  C1                  	pop	bc			; get loopcounter and direction
+     356   00:41B2                      
+     357   00:41B2  10 35               	djnz	recinhl+1		; stlll recording in current field
+     358   00:41B4  06 04               	ld	b,4			; set counter for next 4 recordings
+     359   00:41B6  2C                  	inc	l			; go to next recordfield, also test end reached
+     360   00:41B7  28 12               	jr	z,levend		; level end, test valid next level
+     361   00:41B9                      
+     362   00:41B9  F5                  	push	af
+     363   00:41BA                      
+     364   00:41BA  3E FD               	ld	a,%11111101
+     365   00:41BC  DB FE               	in	a,(254)
+     366   00:41BE  E6 02               	and	2			; S=STOP REC
+     367   00:41C0  20 26               	jr	nz,recinhl		
+     368   00:41C2                      
+     369   00:41C2  77                  errec1	ld	(hl),a			; erase any old recording
+     370   00:41C3  2C                  	inc	l
+     371   00:41C4  20 FC               	jr	nz,errec1		; erase recording to end
+     372   00:41C6                      
+     373   00:41C6  D9                  	exx
+     374   00:41C7  D9                  desterr	exx				; we need a test with ghost first
+     375   00:41C8  31 25 46            	ld	sp,dfile-4+1024		; 3 entries with different regs on stack, 1 solution
+     376   00:41CB  7A                  levend	ld	a,d
+     377   00:41CC                      
+     378   00:41CC  C1                  	pop	bc			; past Dr Beep gets start direction future Dr Beep
+     379   00:41CD  D1                  	pop	de			; past Dr Beep gets start future Dr Beep
+     380   00:41CE                      
+     381   00:41CE  FE 0E               	cp	lines
+     382   00:41D0  21 2E 40            	ld	hl,getidea+1
+     383   00:41D3  30 04               	jr	nc,p2test		; test 1st screenloop
+     384   00:41D5                      
+     385   00:41D5  AF                  	xor	a
+     386   00:41D6  BE                  	cp	(hl)
+     387   00:41D7  28 03               	jr	z,pardjp		; ghost did not get idea
+     388   00:41D9                      
+     389   00:41D9  2B                  p2test	dec	hl			; now playertest
+     390   00:41DA  CB 76               	bit	6,(hl)			; test idea taken
+     391   00:41DC  CA A9 40            pardjp	jp	z,pardead		; player did not carry idea		
+     392   00:41DF                      
+     393   00:41DF  D9                  	exx
+     394   00:41E0  CD 04 40            	call	scrpos
+     395   00:41E3  D6 B9               	sub	"T"+101			; player on timemachine?
+     396   00:41E5  C3 D0 40            	jp	levloop			; do next loop when on timemachine
+     397   00:41E8                      
+     398   00:41E8                      
+     399   00:41E8                      
+     400   00:41E8  F1                  recinhl	pop	af
+     401   00:41E9  E5                  	push	hl
+     402   00:41EA  C5                  	push	bc			; save loopcounter!
+     403   00:41EB  47                  	ld	b,a			; recorded direction to B
+     404   00:41EC  CD F6 41            	call	dodir2			; do the move held in B
+     405   00:41EF  E1                  	pop	hl			; NOT POP BC, C can alter in dodir2
+     406   00:41F0  44                  	ld	b,h			; set back loopcounter
+     407   00:41F1  E1                  	pop	hl			; get recording back
+     408   00:41F2  D9                  	exx
+     409   00:41F3  C3 0C 41            	jp	ploop
+     410   00:41F6                      
+     411   00:41F6                      	
+     412   00:41F6                      
+     413   00:41F6  AF                  dodir2	xor	a
+     414   00:41F7  90                  	sub	b			; -b
+     415   00:41F8  C8                  	ret	z			; never true with player
+     416   00:41F9  C6 40               	add	a,dirtab mod 256
+     417   00:41FB  6F                  	ld	l,a
+     418   00:41FC  26 40               	ld	h,dirtab / 256		; make H point OK
+     419   00:41FE  D5                  	push	de			; save XY
+     420   00:41FF  6E                  	ld	l,(hl)			; get move
+     421   00:4200  CD 7D 00            	call	#7d			; JP (HL) in the ROM
+     422   00:4203  E1                  	pop	hl
+     423   00:4204  D0                  	ret	nc			; legal move
+     424   00:4205  54                  	ld	d,h			; undo move
+     425   00:4206  5D                  	ld	e,l
+     426   00:4207  C9                  	ret
+     427   00:4208                      
+     428   00:4208  04                  norm1	inc	b			; a single unpack, B becomes 1
+     429   00:4209  7E                  unpack	ld 	a,(hl)			; get copy byte
+     430   00:420A  12                  	ld 	(de),a			; write to unpacklocation
+     431   00:420B  1B                  	dec 	de			; next destination
+     432   00:420C  08                  	ex	af,af'			; delay display until after unpacking
+     433   00:420D  10 FA               	djnz 	unpack			; copy loop
+     434   00:420F  2B                  	dec 	hl			; go to next compressed location
+     435   00:4210  7E                  	ld 	a,(hl)			; get data
+     436   00:4211  D6 C0               	sub 	192			; test packed
+     437   00:4213  38 F3               	jr 	c,norm1			; not packed, 1 byte
+     438   00:4215  47                  	ld 	b,a			; repeater to B
+     439   00:4216  2B                  	dec 	hl			; point to byte
+     440   00:4217  D6 29               	sub 	#e9-192			; test end reached
+     441   00:4219  20 EE               	jr 	nz,unpack		; unpack the screen
+     442   00:421B  C3 94 40            	jp	start			; start the game
+     443   00:421E                      
+     444   00:421E                      
+     445   00:421E  00 (11)             	block	#421f+10-$,0
+     446   00:4229                      
+     447   00:4229                      
+     448   00:4229  76                  dfile 	db 	118
+     449   00:422A                      
+     450   00:422A  33 31 76 E9 1C 00   score	db	"N"-27,"L"-27,118,#e9,28,0
+     451   00:4230  00 00               lives	db	0,0
+     452   00:4232                      	db	"B"+101,"E"+101,"E"+101,"P"+101,"S"+101,"T"+101,"R"+101,"A"+101,"P"+101,0
+     452   00:4232  A7 AA AA B5 B8 B9 B7 A6 B5 00 
+     453   00:423C  16 1D 21 1C 16 76   hiscore	db	22,28+1,28+5,28+0,22,118
+     454   00:4242                      
+     455   00:4242  1C                  timer	db	28
+     456   00:4243                      
+     457   00:4243  00                  	db	0
+     458   00:4244  56                  	ld	d,(hl) 			
+     459   00:4245  56                  	ld	d,(hl)	
+     460   00:4246  56                  	ld	d,(hl)
+     461   00:4247  56                  	ld	d,(hl)
+     462   00:4248                      
+     463   00:4248                      	db	"P"+101,"A"+101,"R"+101,"A"+101,"D"+101,"O"+101,"X"+101,118,118
+     463   00:4248  B5 A6 B7 A6 A9 B4 BD 76 76 
+     464   00:4251                      
+     465   00:4251  80 D7               screen	db	bg,192+rsize
+     466   00:4253  76                  	db 	118
+     467   00:4254  80 D7               	db	bg,192+rsize
+     468   00:4256  76                  	db 	118
+     469   00:4257  80 D7               	db	bg,192+rsize
+     470   00:4259  76                  	db 	118
+     471   00:425A  80 D7               	db	bg,192+rsize
+     472   00:425C  76                  	db 	118
+     473   00:425D  80 D7               	db	bg,192+rsize
+     474   00:425F  76                  	db 	118
+     475   00:4260  80 D7               	db	bg,192+rsize
+     476   00:4262  76                  	db 	118
+     477   00:4263  80 D7               	db	bg,192+rsize
+     478   00:4265  76                  	db 	118
+     479   00:4266  80 D7               	db	bg,192+rsize
+     480   00:4268  76                  	db 	118
+     481   00:4269  80 D7               	db	bg,192+rsize
+     482   00:426B  76                  	db 	118
+     483   00:426C  80 D7               	db	bg,192+rsize
+     484   00:426E  76                  	db 	118
+     485   00:426F  80 D7               	db	bg,192+rsize
+     486   00:4271  76                  	db 	118
+     487   00:4272  80 D7               	db	bg,192+rsize
+     488   00:4274  76                  	db 	118
+     489   00:4275  80 D7               	db	bg,192+rsize
+     490   00:4277  76                  	db 	118
+     491   00:4278  80 D7               	db	bg,192+rsize
+     492   00:427A  76                  	db 	118
+     493   00:427B  80 D7               	db	bg,192+rsize
+     494   00:427D  76                  	db 	118
+     495   00:427E  E9                  endscr	db	#e9
+     496   00:427F                      
+     497   00:427F                      
+     498   00:427F                      
+     499   00:427F                      ; one time routine routines placed on recording area
+     500   00:427F  43                  init4	ld	b,e
+     501   00:4280  ED B0               	ldir				; copy routines over sysvar
+     502   00:4282  21 7E 42            	ld	hl,endscr
+     503   00:4285  11 B9 43            	ld	de,#4400-71
+     504   00:4288  C3 08 42            	jp	norm1
+     505   00:428B                      
+     506   00:428B                      fieldc
+     507   00:428B                      
+     508   00:428B  A9                  shwdirc	db	"D"+101
+     509   00:428C  B7                  	db	"R"+101
+     510   00:428D  BA                  	db	"U"+101
+     511   00:428E  B1                  	db	"L"+101
+     512   00:428F                      
+     513   00:428F  3E 0E               	ld	a,lines
+     514   00:4291  BA                  	cp	d
+     515   00:4292  D8                  	ret	c			; out of screen vertically
+     516   00:4293  D5                  	push	de
+     517   00:4294  AF                  	xor	a	
+     518   00:4295  67                  	ld	h,a
+     519   00:4296  DA                  	db	#da			; JP C never true to skip DFILE
+     520   00:4297  29 42               dfilec	dw 	dfile			; DFILE, not codeable in lowres
+     521   00:4299  7A                  	ld	a,d
+     522   00:429A  87                  	add	a,a			;  2B
+     523   00:429B  82                  	add	a,d			;  3B
+     524   00:429C  87                  	add	a,a			;  6B
+     525   00:429D  87                  	add	a,a			; 12B
+     526   00:429E  6F                  	ld	l,a
+     527   00:429F  54                  	ld	d,h
+     528   00:42A0  29                  	add	hl,hl			; 24B
+     529   00:42A1  19                  	add	hl,de			; 16B+C	
+     530   00:42A2  11 50 42            	ld	de,screen-1
+     531   00:42A5  19                  	add	hl,de			; startposition maze added
+     532   00:42A6  D1                  	pop	de
+     533   00:42A7  7E                  	ld	a,(hl)			; get field value
+     534   00:42A8  FE 7F               	cp	#7f			; out of screen horizontally
+     535   00:42AA  C9                  	ret	
+     536   00:42AB                      
+     537   00:42AB  15                  upc	dec	d
+     538   00:42AC  C9                  	ret
+     539   00:42AD                      
+     540   00:42AD  1D                  leftc	dec	e
+     541   00:42AE  C9                  	ret
+     542   00:42AF                      
+     543   00:42AF  00                  	db	0
+     544   00:42B0                      
+     545   00:42B0  FF FF FF            lastkc	db	255,255,255
+     546   00:42B3  37                  marginc	db	55
+     547   00:42B4                      
+     548   00:42B4  1C                  rightc	inc	e
+     549   00:42B5  C9                  	ret
+     550   00:42B6                      
+     551   00:42B6  14                  downc	inc	d
+     552   00:42B7  C9                  	ret
+     553   00:42B8                      
+     554   00:42B8  00 00               getidc	db	0,0			; datafields if player or recorded has taken an idea
+     555   00:42BA                      
+     556   00:42BA  ED 5F               rndc	ld	a,r			; random part1: R-register
+     557   00:42BC  86                  	add	a,(hl)			; random part2: add seed
+     558   00:42BD  D5                  	push	de
+     559   00:42BE  11                  	db	17
+     560   00:42BF  FF FF               framesc	dw	65535
+     561   00:42C1  83                  	add	a,e			; random part3: add framescount 
+     562   00:42C2  D1                  	pop	de
+     563   00:42C3  2C                  	inc	l			; point to next recording
+     564   00:42C4  C9                  	ret
+     565   00:42C5                      
+     566   00:42C5                      erout
+     567   00:42C5                      
+     568   00:42C5                      
+     569   00:42C5  80                  vars    db 128			
+     570   00:42C6  (00:42C6)           last	equ $   	
+     571   00:42C6                      
+     572   00:42C6                      end
+
+    LABELS
+-------------------------------------------------
+00:0000000E   lines
+00:00000017   rsize
+00:00000080   bg
+00:00004000   field
+00:00004004   scrpos
+00:00000000 X lastkok
+00:00000000 X frameok
+00:0000402F   rnd
+00:00004020   up
+00:00004022   left
+00:00004029   right
+00:0000402B   down
+00:00004000 X shwdir
+00:0000402D   getidea
+00:00004280   t1
+00:00004389   t2
+00:00004009   basic
+00:0000400D X free
+00:00004014 X eline
+00:00004016 X chadd
+00:00004018 X keys
+00:0000401E X berg
+00:0000401F X mem
+00:00004021   init1
+00:00004025   lastk
+00:00004028 X margin
+00:00004029 X nxtlin
+00:0000402B   init2
+00:00004034   frames
+00:0000403B X cdflag
+00:00004040   dirtab
+00:00004048   dirp
+00:0000404C   rotr
+00:0000404E   rotl
+00:0000404F X bnd
+00:00004054   fward
+00:000000A6   jrcalc
+00:0000405E   place
+00:00004071   addp
+00:00004072   addst
+00:00004076   ten
+00:00004082   eog
+00:0000408A   fihi
+00:00004094   start
+00:0000409E   ersc
+00:000040A9   pardead
+00:000040B5   cllp
+00:000040B7   lnfd
+00:000040C9   clrrec
+00:000040D0   levloop
+00:000040D9   wfr2
+00:000040E0   rndseed
+00:000040E6   frndy
+00:000040F0   frndx
+00:00004104 X notlv1
+00:0000410C   ploop
+00:00004129   erasall
+00:0000413B   vwtlp
+00:00004150   dodisp
+00:00004163   noidea
+00:00004173   wfr
+00:0000418B   dirlp
+00:00004195   dodir
+00:000041C2   errec1
+00:000041C7   desterr
+00:000041CB   levend
+00:000041D9   p2test
+00:000041DC   pardjp
+00:000041E8   recinhl
+00:000041F6   dodir2
+00:00004208   norm1
+00:00004209   unpack
+00:00004229   dfile
+00:0000422A   score
+00:00004230   lives
+00:0000423C   hiscore
+00:00004242   timer
+00:00004251   screen
+00:0000427E   endscr
+00:0000427F   init4
+00:0000428B   fieldc
+00:0000428B   shwdirc
+00:00004297 X dfilec
+00:000042AB   upc
+00:000042AD   leftc
+00:000042B0   lastkc
+00:000042B3 X marginc
+00:000042B4   rightc
+00:000042B6   downc
+00:000042B8   getidc
+00:000042BA   rndc
+00:000042BF   framesc
+00:000042C5   erout
+00:000042C5 X vars
+00:000042C6   last
+00:000042C6 X end
+
+
+ Output: C:\2025 usb\USB-staafje\150 Beepstrap paradox\beep017.out
+-------------------------------------------------
+
+ Page: 00
+  Org: 00004009  Size: *  Used: 000002BD
+
+   Address   Length Align   Label
+   00004009     701         basic

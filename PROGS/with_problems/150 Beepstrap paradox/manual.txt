@@ -1,0 +1,45 @@
+BEEPSTRAP PARADOX
+-----------------
+
+Introduction:
+How did Dr Beep get 150 ideas to make all this games?
+This game will reveal it. He gets his ideas from his future self who
+plants the found idea on your path to find it. When you have placed the idea
+you need to get the next idea.
+
+The gameplay:
+After loading the game you press NEWLINE to start a game.
+You start at the left top corner facing down (D).
+Other views are left (L), up (U) or right (R).
+You need to pick up the idea (?) and then move to one of the two timemachines to go
+back in time to place the idea on the same place you found it for your earlier version to find it.
+
+Easy, right!
+Not so fast!
+In the first run you did not see anybody. So when you go back in time to place your idea 
+you may never be in sight of your previous self or you create a paradox.
+The path you took in the first run is recorded and played back by the computer.
+You need to place the idea on the "." without being seen and before the recorded play gets to the field.
+If you fail to place the idea on the destination you create a paradox and you lose a life.
+
+How many ideas can you place in the head of Dr Beep?
+You need to complete a run to a timemachine before the timer reaches 0.
+
+The following paradoxes can appear:
+1) going to the timemachine without an idea.
+2) not placing the idea on de destination.
+3) earlier Dr Beep enters timemachine without an idea.
+4) not on time at the timemachine to go back in time.
+5) in sight of previous Dr Beep, he sees the future Dr Beep.
+
+Extra option:
+You don't need to wait for the time to reach zero. When you are at the timemachine
+(and other too) you can end the time with S. You need to press it some time.
+
+Controls:
+Q move in direction shown
+O rotate anticlockwise
+P rotate clockwise
+Z place idea
+S stop timer
+NewLine start (new) game
